@@ -9,9 +9,9 @@
   <body>
     <h1>Test</h1>
     <script type="module">
-      import init, { greet } from "../pkg/chaos_theory.js";
+      import init, { gen_number } from "../pkg/chaos_theory.js";
       init().then(() => {
-        const out = greet(4);
+        const out = gen_number(2, 2, 2, 1);
         console.log(out);
       });
     </script>
