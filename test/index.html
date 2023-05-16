@@ -11,7 +11,7 @@
     <script type="module">
       import init, { gen_number } from "../pkg/chaos_theory.js";
       init().then(() => {
-        const out = gen_number(2, 2, 2, 1);
+        const out = JSON.parse(gen_number(2, 2, 4, 1, -2, 0));
         console.log(out);
       });
     </script>
