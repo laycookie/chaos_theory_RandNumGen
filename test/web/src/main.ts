@@ -1,4 +1,4 @@
-import { gen_number } from "chaos_theory";
+import { simulate } from "chaos_theory";
 import * as PIXI from "pixi.js";
 
 const res_x = 500;
@@ -8,12 +8,12 @@ let app = new PIXI.Application({
   height: res_y,
   antialias: true,
 });
-document.body.appendChild(app.view);
+document.body.appendChild(app.view as unknown as Node);
 
 const SCALER_CONST = 30;
 // create circle sprite
 
-const out = JSON.parse(gen_number(2, 2, 4, 1, 0, 35));
+const out = JSON.parse(simulate(2, 2, 4, 1, 0, 0, 180));
 for (let i of out.circles) {
   let circle = new PIXI.Graphics();
   circle.beginFill(0x9966ff);

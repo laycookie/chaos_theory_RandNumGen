@@ -13,7 +13,7 @@
     "vite": "^4.3.2"
   },
   "dependencies": {
-    "chaos_theory": "^0.1.1",
+    "chaos_theory": "0.1.43",
     "pixi.js": "^7.2.4",
     "vite-plugin-top-level-await": "^1.3.0",
     "vite-plugin-wasm": "^3.2.2"
