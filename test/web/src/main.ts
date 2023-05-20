@@ -11,9 +11,9 @@ let app = new PIXI.Application({
 document.body.appendChild(app.view as unknown as Node);
 
 const SCALER_CONST = 30;
-// create circle sprite
 
-const out = JSON.parse(simulate(3, 3, 3, 1, 0, 1, 45));
+const out = JSON.parse(simulate(3, 3, 3, 1, 0, 0, 270));
+// create circle sprite
 for (let i of out.circles) {
   let circle = new PIXI.Graphics();
   circle.beginFill(0x9966ff);
@@ -27,6 +27,7 @@ for (let i of out.circles) {
   circle.y = res_y / 2;
   app.stage.addChild(circle);
 }
+// create laser beams
 for (let i of out.laser_beams) {
   if (i.length < 0) {
     console.log("negative length");

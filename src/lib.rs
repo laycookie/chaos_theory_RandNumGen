@@ -60,19 +60,67 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             let cir_x = circle.x - laser_x_offset;
             let cir_y = circle.y - laser_y_offset;
 
+
+            // checking for angles at which quadrants intersect
+            if angle == 0f64 {
+                if !(cir_x > 0f64) {
+                    continue;
+                }
+            } else if angle == 90f64 {
+                if cir_y < 0f64 {
+                    continue;
+                }
+            } else if angle == 180f64 {
+                if cir_x > 0f64 {
+                    continue;
+                }
+            } else if angle == 270f64 {
+                if cir_y > 0f64 {
+                    continue;
+                }
+            }
+            // validate that the circle is in the correct quadrant based on the angle
+            else if angle > 0f64 && angle < 90f64 {
+                if !(cir_x > 0f64 && cir_y > 0f64) {
+                    continue;
+                }
+            } else if angle > 90f64 && angle < 180f64 {
+                if cir_x > 0f64 || cir_y < 0f64 {
+                    continue;
+                }
+            } else if angle > 180f64 && angle < 270f64 {
+                if cir_x > 0f64 || cir_y > 0f64 {
+                    continue;
+                }
+            } else if angle > 270f64 && angle < 360f64 {
+                if cir_x < 0f64 || cir_y > 0f64 {
+                    continue;
+                }
+            }
+
             // calculate the intersection of the laser and the circle
             let pi = std::f64::consts::PI;
-            let a = 1.0 + ((angle*pi)/180f64).tan().powi(2);
-            let b = (-2f64 * cir_y * ((pi*angle)/180f64).tan()) - (2f64 * cir_x);
-            let c = cir_y.powi(2) - circle.radius.powi(2) + cir_x.powi(2);
+            let a;
+            let b;
+            let c;
+            if !(angle == 90f64 || angle == 270f64) {
+                a = 1.0 + ((angle*pi)/180f64).tan().powi(2);
+                b = (-2f64 * cir_y * ((pi*angle)/180f64).tan()) - (2f64 * cir_x);
+                c = cir_y.powi(2) - circle.radius.powi(2) + cir_x.powi(2);
+            } else {
+                a = 1f64;
+                b = -2f64 * cir_y;
+                c = cir_y.powi(2) - circle.radius.powi(2) + cir_x.powi(2);
+            }
 
 
-
-            let r_a = round_to_2_decimals(a, 1000);
-            let r_b = round_to_2_decimals(b, 1000);
-            let r_c = round_to_2_decimals(c, 1000);
+            let r_a = round_to_2_decimals(a, 6);
+            let r_b = round_to_2_decimals(b, 6);
+            let r_c = round_to_2_decimals(c, 6);
 
             let raw_intersection = quadratic(r_a, r_b, r_c);
+
+            // TODO: fix error where the intersection is not found at 90 degrees
             let intersection: (f64, f64);
             if raw_intersection.is_none() {
                 continue;
@@ -80,72 +128,33 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
                 intersection = raw_intersection.unwrap();
             }
 
-            // validate that the circle is in the correct quadrant based on the angle
-            // Checking for ranges
-            if angle > 0f64 && angle < 90f64 {
-                if !(cir_x > 0f64 && cir_y > 0f64) {
-                    continue;
-                }
-            } else if angle > 90f64 && angle < 180f64 {
-                if !(cir_x < 0f64 && cir_y > 0f64) {
-                    continue;
-                }
-            } else if angle > 180f64 && angle < 270f64 {
-                if !(cir_x < 0f64 && cir_y < 0f64) {
-                    continue;
-                }
-            } else if angle > 270f64 && angle < 360f64 {
-                if !(cir_x > 0f64 && cir_y < 0f64) {
-                    continue;
-                }
-            }
-            // checking for angles at which quadrants intersect
-            else if angle == 0f64 {
-                if !(cir_x > 0f64) {
-                    continue;
-                }
-            } else if angle == 90f64 {
-            if !(cir_y > 0f64) {
-                continue;
-            }
-            } else if angle == 180f64 {
-                if !(cir_x < 0f64) {
-                    continue;
-                }
-            } else if angle == 270f64 {
-                if !(cir_y < 0f64) {
-                    continue;
-                }
-            }
-
-            // validate that the closest part of the circle is used
-            if intersection.0.abs() < 0f64 && intersection.1.abs() < 0f64 {
-                continue;
-            }
-
             // validate that the closest intersection is used
-            fn distance(x: f64, y: f64) -> f64 {
-                return (x.powi(2) + y.powi(2)).sqrt();
-            }
-
-            // calculate the end of the laser beam
+            let temp_x: f64;
+            let temp_y: f64;
             if intersection.1 < 0f64 {
-                let temp_x = intersection.0;
-                let temp_y = (angle * (pi/180f64)).tan() * intersection.0;
+                if angle == 90f64 || angle == 270f64 {
+                    temp_y = intersection.0;
+                    temp_x = 0f64;
+                } else {
+                    temp_x = intersection.0;
+                    temp_y = (angle * (pi/180f64)).tan() * temp_x;
+                }
 
-                if distance(temp_x, temp_y) < distance(end_x, end_y) || end_x == -1f64 {
-                    end_x = temp_x;
-                    end_y = temp_y;
-                } else { continue; }
             } else {
-                let temp_x = intersection.1;
-                let temp_y = (angle * (pi/180f64)).tan() * intersection.1;
-
-                if distance(temp_x, temp_y) < distance(end_x, end_y) || end_x == -1f64 {
-                    end_x = temp_x;
-                    end_y = temp_y;
-                } else { continue; }
+                if angle == 90f64 || angle == 270f64 {
+                    temp_y = intersection.1;
+                    temp_x = 0f64;
+                } else {
+                    temp_x = intersection.1;
+                    temp_y = (angle * (pi/180f64)).tan() * temp_x;
+                }
             }
+
+            // check if the intersection is closer than the previous one
+            if distance(temp_x, temp_y) < distance(end_x, end_y) || end_x == -1f64 {
+                end_x = round_to_2_decimals(temp_x, 6) + laser_x_offset;
+                end_y = round_to_2_decimals(temp_y, 6) + laser_y_offset;
+            } else { continue; }
 
             // calculate the angle of the laser beam
             ref_angle = (cir_y / cir_x).atan();
@@ -168,6 +177,7 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
     return JsValue::from_str(&json_string);
 }
 
+/// first is the solution after adding and second is the solution after subtracting
 fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
     let delta = b.powi(2) - 4.0*a*c;
     if delta < 0.0 {
@@ -179,6 +189,10 @@ fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
 }
 
 /// please just don't pass 0 as rounding_to
-fn round_to_2_decimals(num: f64, rounding_to: u64) -> f64 {
-    return (num * rounding_to as f64).round() / rounding_to as f64;
+fn round_to_2_decimals(num: f64, rounding_to: u32) -> f64 {
+    return (num * (10_i32.pow(rounding_to)/10_i32) as f64).round() / (10_i32.pow(rounding_to)/10_i32) as f64;
+}
+
+fn distance(x: f64, y: f64) -> f64 {
+    return (x.powi(2) + y.powi(2)).sqrt();
 }
