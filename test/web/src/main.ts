@@ -13,7 +13,7 @@ document.body.appendChild(app.view as unknown as Node);
 const SCALER_CONST = 30;
 // create circle sprite
 
-const out = JSON.parse(simulate(2, 2, 4, 1, 0, 0, 180));
+const out = JSON.parse(simulate(3, 3, 3, 1, 0, 1, 45));
 for (let i of out.circles) {
   let circle = new PIXI.Graphics();
   circle.beginFill(0x9966ff);
