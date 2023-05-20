@@ -120,7 +120,7 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
 
             let raw_intersection = quadratic(r_a, r_b, r_c);
 
-            // TODO: fix error where the intersection is not found at 90 degrees
+            // decompiles quadratic and skips if answer if imagery
             let intersection: (f64, f64);
             if raw_intersection.is_none() {
                 continue;
