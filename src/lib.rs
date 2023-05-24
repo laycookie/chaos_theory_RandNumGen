@@ -114,9 +114,9 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
 
 
-            let r_a = round_to_2_decimals(a, 6);
-            let r_b = round_to_2_decimals(b, 6);
-            let r_c = round_to_2_decimals(c, 6);
+            let r_a = round_to_2_decimals(a, 9);
+            let r_b = round_to_2_decimals(b, 9);
+            let r_c = round_to_2_decimals(c, 9);
 
             let raw_intersection = quadratic(r_a, r_b, r_c);
 
@@ -152,13 +152,13 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
 
             // check if the intersection is closer than the previous one
             if distance(temp_x, temp_y) < distance(end_x, end_y) || end_x == -1f64 {
-                end_x = round_to_2_decimals(temp_x, 6) + laser_x_offset;
-                end_y = round_to_2_decimals(temp_y, 6) + laser_y_offset;
+                end_x = round_to_2_decimals(temp_x, 9) + laser_x_offset;
+                end_y = round_to_2_decimals(temp_y, 9) + laser_y_offset;
             } else { continue; }
 
             // calculate the angle of the laser beam
-            ref_angle = (cir_y / cir_x).atan();
-            let laser_angle = 2.0 * ref_angle - angle;
+            let tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
+            ref_angle = tan_line_on_circle;
         }
         // add the laser beam to the world
         world_ref.laser_beams.push(LaserBeam {
