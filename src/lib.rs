@@ -13,7 +13,7 @@ struct LaserBeam {
     x: f64,
     y: f64,
     angle: f64,
-    ref_angle: f64,
+    reflecting_angle: f64,
     end_x: f64,
     end_y: f64,
 }
@@ -44,17 +44,19 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
     fn simulate_laser(laser_x_offset: f64, laser_y_offset: f64, in_angle: f64, world_ref: &mut World) {
         let mut end_x: f64 = -1f64;
         let mut end_y: f64 = -1f64;
-        let mut ref_angle: f64 = -1f64;
+        let mut reflecting_angle: f64 = -1f64;
 
         let mut angle = in_angle;
         // make sure the angle is always positive and within 360 degrees
-        while angle < 0f64 {
-            angle += 360f64;
+        fn filter_angle(angle:&mut f64) {
+            while *angle < 0f64 {
+                *angle += 360f64;
+            }
+            while *angle >= 360f64 {
+                *angle -= 360f64;
+            }
         }
-        while angle >= 360f64 {
-            angle -= 360f64;
-        }
-
+        filter_angle(&mut angle);
         for circle in &mut world_ref.circles {
             // centering the laser by changing circles location
             let cir_x = circle.x - laser_x_offset;
@@ -158,20 +160,33 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
 
             // calculate the angle of the laser beam
             let tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
-            ref_angle = tan_line_on_circle;
+            // calculate reflecting angle when the laser bounces off the circle
+            reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
+            filter_angle(&mut reflecting_angle);
         }
         // add the laser beam to the world
         world_ref.laser_beams.push(LaserBeam {
             x: laser_x_offset,
             y: laser_y_offset,
             angle,
-            ref_angle,
+            reflecting_angle,
             end_x,
             end_y,
         });
     }
     simulate_laser(ini_laser_offset_x, ini_laser_offset_y, ini_laser_angle, &mut world);
 
+    
+    for _ in 0..100 {
+        // select last laser beam(LLB) in world
+        let LLB = world.laser_beams.last().unwrap();
+
+        if LLB.reflecting_angle == -1f64 {
+            break;
+        }
+        
+        simulate_laser(LLB.end_x, LLB.end_y, LLB.reflecting_angle, &mut world);
+    }
 
     let json_string = serde_json::to_string(&world).unwrap();
     return JsValue::from_str(&json_string);

@@ -29,8 +29,8 @@ for (let i of out.circles) {
 }
 // create laser beams
 for (let i of out.laser_beams) {
-  if (i.length < 0) {
-    console.log("negative length");
+  if (i.reflecting_angle < 0) {
+    console.log(i);
     break;
   }
 
