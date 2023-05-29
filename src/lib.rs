@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use serde::{Serialize};
-use web_sys::{window};
+use web_sys::window;
 
 #[derive(Serialize)]
 struct World {
@@ -85,19 +85,19 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
             // validate that the circle is in the correct quadrant based on the angle
             else if angle > 0f64 && angle < 90f64 {
-                if !(cir_x > 0f64 && cir_y > 0f64) {
+                if cir_x < 0f64 && cir_y < 0f64 {
                     continue;
                 }
             } else if angle > 90f64 && angle < 180f64 {
-                if cir_x > 0f64 || cir_y < 0f64 {
+                if cir_x > 0f64 && cir_y < 0f64 {
                     continue;
                 }
             } else if angle > 180f64 && angle < 270f64 {
-                if cir_x > 0f64 || cir_y > 0f64 {
+                if cir_x > 0f64 && cir_y > 0f64 {
                     continue;
                 }
             } else if angle > 270f64 && angle < 360f64 {
-                if cir_x < 0f64 || cir_y > 0f64 {
+                if cir_x < 0f64 && cir_y > 0f64 {
                     continue;
                 }
             }
@@ -107,6 +107,8 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             let a;
             let b;
             let c;
+
+            // TODO: Fix for negative tan
             if !(angle == 90f64 || angle == 270f64) {
                 a = 1.0 + ((angle*pi)/180f64).tan().powi(2);
                 b = (-2f64 * cir_y * ((pi*angle)/180f64).tan()) - (2f64 * cir_x);
@@ -118,9 +120,9 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
 
 
-            let r_a = round_to_2_decimals(a, 9);
-            let r_b = round_to_2_decimals(b, 9);
-            let r_c = round_to_2_decimals(c, 9);
+            let r_a = round_to_2_decimals(a, 12);
+            let r_b = round_to_2_decimals(b, 12);
+            let r_c = round_to_2_decimals(c, 12);
 
             let raw_intersection = quadratic(r_a, r_b, r_c);
 
@@ -143,7 +145,6 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
                     temp_x = intersection.0;
                     temp_y = (angle * (pi/180f64)).tan() * temp_x;
                 }
-
             } else {
                 if angle == 90f64 || angle == 270f64 {
                     temp_y = intersection.1;
@@ -155,19 +156,59 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
 
             // check if the intersection is closer than the previous one
-            if distance(temp_x, temp_y) < distance(end_x, end_y) || end_x == -1f64 {
-                end_x = round_to_2_decimals(temp_x, 9) + laser_x_offset;
-                end_y = round_to_2_decimals(temp_y, 9) + laser_y_offset;
+            if distance(temp_x, temp_y) < distance(end_x, end_y) || reflecting_angle == -1f64 {
+                end_x = temp_x + laser_x_offset;
+                end_y = temp_y + laser_y_offset;
             } else { continue; }
 
+            // checks if intersects with the circle at the same point as the laser
+            if round_to_2_decimals(end_x, 4) == round_to_2_decimals(laser_x_offset, 4) &&
+                round_to_2_decimals(end_y, 4) == round_to_2_decimals(laser_y_offset,4) {
+                continue;
+            }
+
             // calculate the angle of the laser beam
-            let tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
-            // calculate reflecting angle when the laser bounces off the circle
-            reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
+            let mut tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
+
+            // if negative rotate 90 degrees and than calculate reflecting angle
+            if tan_line_on_circle < 0f64 {
+                tan_line_on_circle = tan_line_on_circle + 90f64;
+                reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
+                reflecting_angle = 180f64 - reflecting_angle;
+            } else {
+                reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
+            }
+
+            // due to the dum reflection formula at 0 & 90 degrees the angle is not correct
+            // so here we are manually setting it to 90 reflection if it intersects at 0 & 90 degrees
+            if angle == 0f64 || angle == 180f64 {
+                if cir_y > 0f64 {
+                    reflecting_angle = 270f64;
+                } else {
+                    reflecting_angle = 90f64;
+                }
+            } else if angle == 90f64 || angle == 270f64 {
+                if cir_x > 0f64 {
+                    reflecting_angle = 180f64;
+                } else {
+                    reflecting_angle = 0f64;
+                }
+            }
+
+
+            let window = window().unwrap();
+            let message = format!("end_x: {}, x: {}", round_to_2_decimals(end_x, 4), round_to_2_decimals(laser_x_offset, 4));
+            let alert = window.alert_with_message(message.as_str());
+
+
             filter_angle(&mut reflecting_angle);
 
             bounces = true;
         }
+
+        let window = window().unwrap();
+        let message = format!("2end_x: {}, 2x: {}", round_to_2_decimals(end_x, 4), round_to_2_decimals(laser_x_offset, 4));
+        let alert = window.alert_with_message(message.as_str());
         
         // add the laser beam to the world
         world_ref.laser_beams.push(LaserBeam {
@@ -183,7 +224,7 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
     simulate_laser(ini_laser_offset_x, ini_laser_offset_y, ini_laser_angle, &mut world);
 
     
-    for _ in 0..100 {
+    for _ in 0..20 {
         // select last laser beam(LLB) in world
         let llb = world.laser_beams.last().unwrap();
 
