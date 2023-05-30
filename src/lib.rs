@@ -87,7 +87,7 @@ pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spaci
 }
 
 #[wasm_bindgen]
-pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_laser_angle: f64) -> JsValue {
+pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_laser_angle: f64, reflection_amount: i64) -> JsValue {
     // clear laser beams previously generated
     WORLD.laser_beams.clear();
 
@@ -273,7 +273,7 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
     simulate_laser(ini_laser_offset_x, ini_laser_offset_y, ini_laser_angle, &mut WORLD);
 
     
-    for _ in 0..20 {
+    for _ in 0..reflection_amount {
         // select last laser beam(LLB) in WORLD
         let llb = WORLD.laser_beams.last().unwrap();
 

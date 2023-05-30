@@ -3,6 +3,7 @@ export type Settings = {
   ini_x: number;
   ini_y: number;
   ini_angle: number;
+  reflectionsNum: bigint;
 };
 
 export type MassSetCircles = {

@@ -8,6 +8,8 @@
   </head>
   <body>
     <div id="app">
+      <h1 id="anglePointer">Angle: 0</h1>
+      <h1 id="RanNum">Random Number: 0</h1>
       <form id="form-submition">
         <input
           type="number"
@@ -25,12 +27,31 @@
         />
         <input
           type="number"
+          name="circleAmountX"
+          id="circleAmountX"
+          placeholder="X circles amount"
+        />
+        <input
+          type="number"
+          name="circleAmountY"
+          id="circleAmountY"
+          placeholder="Y circles amount"
+        />
+        <input
+          type="number"
           step="0.000000000001"
           name="angle"
           id="angle"
           placeholder="angle"
         />
-        <input type="submit" value="submit" />
+        <input
+          type="number"
+          name="reflectionsAmount"
+          id="reflectionsAmount"
+          placeholder="reflections amount"
+        />
+        <input type="number" name="zoom" id="zoom" placeholder="zoom" />
+        <input type="submit" value="render" />
       </form>
     </div>
     <script type="module" src="/src/main.ts"></script>
