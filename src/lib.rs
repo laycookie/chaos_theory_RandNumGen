@@ -65,6 +65,15 @@ pub unsafe fn del_circle(id: i64) {
 
 #[wasm_bindgen]
 pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius: i32) {
+    // clear circles previously generated (circles without id)
+    WORLD.circles.retain(|circle| {
+        if let Some(_) = circle.id {
+            true
+        } else {
+            false
+        }
+    });
+
     // generate circles in the WORLD
     for x in 0..circle_amount_x {
         for y in 0..circle_amount_y{
@@ -79,6 +88,9 @@ pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spaci
 
 #[wasm_bindgen]
 pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_laser_angle: f64) -> JsValue {
+    // clear laser beams previously generated
+    WORLD.laser_beams.clear();
+
     fn simulate_laser(laser_x_offset: f64, laser_y_offset: f64, in_angle: f64, world_ref: &mut World) {
         let mut end_x: f64 = -1f64;
         let mut end_y: f64 = -1f64;
@@ -207,28 +219,38 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
 
             // calculate the angle of the laser beam
             let tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
-            // if negative rotate 90 degrees and than calculate reflecting angle
-            if tan_line_on_circle < 0f64 {
-                // tan_line_on_circle = tan_line_on_circle + 90f64;
-                reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
-                // reflecting_angle = 180f64 - reflecting_angle;
-            } else {
-                reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
-            }
+            reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
 
-            // due to the dum reflection formula at 0 & 90 degrees the angle is not correct
-            // so here we are manually setting it to 90 reflection if it intersects at 0 & 90 degrees
-            if angle == 0f64 || angle == 180f64 {
+            filter_angle(&mut reflecting_angle);
+
+            // due to the dum reflection formula if intersection at tangent line angle is same as laser
+            // angle reflection will be calculated incorrectly so we set it manually
+            if angle == reflecting_angle {
                 if cir_y > 0f64 {
-                    reflecting_angle = 270f64;
-                } else {
-                    reflecting_angle = 90f64;
+                    if angle < 180f64 {
+                        reflecting_angle = angle - 90f64;
+                    } else {
+                        reflecting_angle = angle + 90f64;
+                    }
+                } else if cir_y < 0f64 {
+                    if angle < 180f64 {
+                        reflecting_angle = angle + 90f64;
+                    } else {
+                        reflecting_angle = angle - 90f64;
+                    }
                 }
-            } else if angle == 90f64 || angle == 270f64 {
                 if cir_x > 0f64 {
-                    reflecting_angle = 180f64;
-                } else {
-                    reflecting_angle = 0f64;
+                    if angle > 180f64 {
+                        reflecting_angle = angle - 90f64;
+                    } else {
+                        reflecting_angle = angle + 90f64;
+                    }
+                } else if cir_x < 0f64 {
+                    if angle > 180f64 {
+                        reflecting_angle = angle + 90f64;
+                    } else {
+                        reflecting_angle = angle - 90f64;
+                    }
                 }
             }
 

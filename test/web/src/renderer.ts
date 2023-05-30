@@ -31,11 +31,16 @@ function calculateNewPoint(
   return { x: newX, y: newY };
 }
 
+export function clear() {
+  app.stage.removeChildren();
+}
+
 export function render({ ini_x, ini_y, ini_angle }: Settings) {
   // clear canvas before the next render
   app.stage.removeChildren();
 
   const out = JSON.parse(simulate(ini_x, ini_y, ini_angle));
+  console.log(out);
   // create circle sprite
   for (let i of out.circles) {
     let circle = new PIXI.Graphics();
@@ -51,12 +56,9 @@ export function render({ ini_x, ini_y, ini_angle }: Settings) {
     app.stage.addChild(circle);
   }
   // create laser beams
-  console.log(out.laser_beams);
   for (let i of out.laser_beams) {
     // check if the laser beam has not bounced from one circle to another circle
     if (!i.bounces) {
-      console.log("Did not bounced");
-      console.log(i);
       let line = new PIXI.Graphics();
       line.lineStyle(1, 0xffffff);
       line.moveTo(i.x * SCALER_CONST, -i.y * SCALER_CONST);
@@ -67,7 +69,6 @@ export function render({ ini_x, ini_y, ini_angle }: Settings) {
       line.x = res_x / 2;
       line.y = res_y / 2;
       app.stage.addChild(line);
-      console.log(i);
       break;
     }
 

@@ -1,9 +1,9 @@
 import type { Settings, MassSetCircles } from "./main.d.ts";
-import { render } from "./renderer";
+import { render, clear } from "./renderer";
 import { manny_circle_set } from "chaos_theory";
 
 let settings: Settings = {
-  zoom: 30,
+  zoom: 20,
   ini_x: 0,
   ini_y: 0,
   ini_angle: 30,
@@ -32,6 +32,13 @@ formSubmition.addEventListener("submit", (e) => {
   settings.ini_angle = Number(angle);
   settings.ini_x = Number(ini_x);
   settings.ini_y = Number(ini_y);
+
+  manny_circle_set(
+    MassSetCircles.circleAmountX,
+    MassSetCircles.circleAmountY,
+    MassSetCircles.circleSpacing,
+    MassSetCircles.circleRadius
+  );
   render(settings);
 });
 
@@ -41,5 +48,4 @@ manny_circle_set(
   MassSetCircles.circleSpacing,
   MassSetCircles.circleRadius
 );
-
 render(settings);
