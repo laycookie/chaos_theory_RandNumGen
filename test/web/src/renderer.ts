@@ -11,6 +11,7 @@ let app = new PIXI.Application({
 });
 document.body.appendChild(app.view as unknown as Node);
 
+// render circles
 const SCALER_CONST = 30;
 
 function calculateNewPoint(
@@ -30,29 +31,11 @@ function calculateNewPoint(
   return { x: newX, y: newY };
 }
 
-export function render({
-  circleAmountX,
-  circleAmountY,
-  circleDistance,
-  circleRadius,
-  ini_x,
-  ini_y,
-  ini_angle,
-}: Settings) {
+export function render({ ini_x, ini_y, ini_angle }: Settings) {
   // clear canvas before the next render
   app.stage.removeChildren();
 
-  const out = JSON.parse(
-    simulate(
-      circleAmountX,
-      circleAmountY,
-      circleDistance,
-      circleRadius,
-      ini_x,
-      ini_y,
-      ini_angle
-    )
-  );
+  const out = JSON.parse(simulate(ini_x, ini_y, ini_angle));
   // create circle sprite
   for (let i of out.circles) {
     let circle = new PIXI.Graphics();

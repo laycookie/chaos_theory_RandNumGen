@@ -1,6 +1,5 @@
 use wasm_bindgen::prelude::*;
 use serde::{Serialize};
-use web_sys::window;
 
 #[derive(Serialize)]
 struct World {
@@ -24,24 +23,62 @@ struct Circle {
     x: f64,
     y: f64,
     radius: f64,
+    id: Option<i128>,
 }
 
-
+static mut WORLD: World = World {
+    circles: Vec::new(),
+    laser_beams: Vec::new(),
+};
 
 #[wasm_bindgen]
-pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius: i32, ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_laser_angle: f64) -> JsValue {
-    let mut world: World = World { circles: Vec::new(), laser_beams: Vec::new() };
-
-    // generate circles in the world
-    for x in 0..circle_amount_x {
-        for y in 0..circle_amount_y{
-            world.circles.push(Circle {
-                x: (x*spacing - (circle_amount_x/2)) as f64,
-                y: (y*spacing - (circle_amount_y/2)) as f64,
-                radius: radius as f64 });
+pub unsafe fn add_circle(x: f64, y: f64, radius: f64) {
+    // find the biggest id in the WORLD
+    let mut biggest_id: i128 = 0;
+    for circle in WORLD.circles.iter() {
+        if let Some(id) = circle.id {
+            if id > biggest_id {
+                biggest_id = id;
+            }
         }
     }
+    // add the circle to the WORLD
+    WORLD.circles.push(Circle {
+        x,
+        y,
+        radius,
+        id: Some(biggest_id + 1),
+    });
+}
 
+#[wasm_bindgen]
+pub unsafe fn del_circle(id: i64) {
+    // remove the circle from the WORLD
+    WORLD.circles.retain(|circle| {
+        if let Some(circle_id) = circle.id {
+            circle_id != id.into()
+        } else {
+            true
+        }
+    });
+}
+
+#[wasm_bindgen]
+pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius: i32) {
+    // generate circles in the WORLD
+    for x in 0..circle_amount_x {
+        for y in 0..circle_amount_y{
+            WORLD.circles.push(Circle {
+                x: (x*spacing - (circle_amount_x/2)) as f64,
+                y: (y*spacing - (circle_amount_y/2)) as f64,
+                radius: radius as f64,
+                id: None,});
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_laser_angle: f64) -> JsValue {
     fn simulate_laser(laser_x_offset: f64, laser_y_offset: f64, in_angle: f64, world_ref: &mut World) {
         let mut end_x: f64 = -1f64;
         let mut end_y: f64 = -1f64;
@@ -85,19 +122,19 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
             // validate that the circle is in the correct quadrant based on the angle
             else if angle > 0f64 && angle < 90f64 {
-                if cir_x < 0f64 && cir_y < 0f64 {
+                if cir_x <= 0f64 && cir_y <= 0f64 {
                     continue;
                 }
             } else if angle > 90f64 && angle < 180f64 {
-                if cir_x > 0f64 && cir_y < 0f64 {
+                if cir_x >= 0f64 && cir_y <= 0f64 {
                     continue;
                 }
             } else if angle > 180f64 && angle < 270f64 {
-                if cir_x > 0f64 && cir_y > 0f64 {
+                if cir_x >= 0f64 && cir_y >= 0f64 {
                     continue;
                 }
             } else if angle > 270f64 && angle < 360f64 {
-                if cir_x < 0f64 && cir_y > 0f64 {
+                if cir_x <= 0f64 && cir_y >= 0f64 {
                     continue;
                 }
             }
@@ -108,7 +145,6 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             let b;
             let c;
 
-            // TODO: Fix for negative tan
             if !(angle == 90f64 || angle == 270f64) {
                 a = 1.0 + ((angle*pi)/180f64).tan().powi(2);
                 b = (-2f64 * cir_y * ((pi*angle)/180f64).tan()) - (2f64 * cir_x);
@@ -135,8 +171,8 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             }
 
             // validate that the closest intersection is used
-            let temp_x: f64;
-            let temp_y: f64;
+            let mut temp_x: f64;
+            let mut temp_y: f64;
             if intersection.1 < 0f64 {
                 if angle == 90f64 || angle == 270f64 {
                     temp_y = intersection.0;
@@ -154,27 +190,28 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
                     temp_y = (angle * (pi/180f64)).tan() * temp_x;
                 }
             }
-
-            // check if the intersection is closer than the previous one
-            if distance(temp_x, temp_y) < distance(end_x, end_y) || reflecting_angle == -1f64 {
-                end_x = temp_x + laser_x_offset;
-                end_y = temp_y + laser_y_offset;
-            } else { continue; }
+            temp_y += laser_y_offset;
+            temp_x += laser_x_offset;
 
             // checks if intersects with the circle at the same point as the laser
-            if round_to_2_decimals(end_x, 4) == round_to_2_decimals(laser_x_offset, 4) &&
-                round_to_2_decimals(end_y, 4) == round_to_2_decimals(laser_y_offset,4) {
+            if round_to_2_decimals(temp_x, 4) == round_to_2_decimals(laser_x_offset, 4) &&
+                round_to_2_decimals(temp_y, 4) == round_to_2_decimals(laser_y_offset,4) {
                 continue;
             }
 
-            // calculate the angle of the laser beam
-            let mut tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
+            // check if the intersection is closer than the previous one
+            if distance(temp_x, temp_y) < distance(end_x, end_y) || reflecting_angle == -1f64 {
+                end_x = temp_x;
+                end_y = temp_y;
+            } else { continue; }
 
+            // calculate the angle of the laser beam
+            let tan_line_on_circle = ((end_y - circle.y) / (end_x - circle.x)).atan() * (180f64 / pi);
             // if negative rotate 90 degrees and than calculate reflecting angle
             if tan_line_on_circle < 0f64 {
-                tan_line_on_circle = tan_line_on_circle + 90f64;
+                // tan_line_on_circle = tan_line_on_circle + 90f64;
                 reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
-                reflecting_angle = 180f64 - reflecting_angle;
+                // reflecting_angle = 180f64 - reflecting_angle;
             } else {
                 reflecting_angle = -(angle - tan_line_on_circle + 180f64) + tan_line_on_circle;
             }
@@ -195,22 +232,12 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
                 }
             }
 
-
-            let window = window().unwrap();
-            let message = format!("end_x: {}, x: {}", round_to_2_decimals(end_x, 4), round_to_2_decimals(laser_x_offset, 4));
-            let alert = window.alert_with_message(message.as_str());
-
-
             filter_angle(&mut reflecting_angle);
 
             bounces = true;
         }
-
-        let window = window().unwrap();
-        let message = format!("2end_x: {}, 2x: {}", round_to_2_decimals(end_x, 4), round_to_2_decimals(laser_x_offset, 4));
-        let alert = window.alert_with_message(message.as_str());
         
-        // add the laser beam to the world
+        // add the laser beam to the WORLD
         world_ref.laser_beams.push(LaserBeam {
             x: laser_x_offset,
             y: laser_y_offset,
@@ -221,21 +248,21 @@ pub fn simulate(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius
             end_y,
         });
     }
-    simulate_laser(ini_laser_offset_x, ini_laser_offset_y, ini_laser_angle, &mut world);
+    simulate_laser(ini_laser_offset_x, ini_laser_offset_y, ini_laser_angle, &mut WORLD);
 
     
     for _ in 0..20 {
-        // select last laser beam(LLB) in world
-        let llb = world.laser_beams.last().unwrap();
+        // select last laser beam(LLB) in WORLD
+        let llb = WORLD.laser_beams.last().unwrap();
 
         if llb.reflecting_angle == -1f64 {
             break;
         }
         
-        simulate_laser(llb.end_x, llb.end_y, llb.reflecting_angle, &mut world);
+        simulate_laser(llb.end_x, llb.end_y, llb.reflecting_angle, &mut WORLD);
     }
 
-    let json_string = serde_json::to_string(&world).unwrap();
+    let json_string = serde_json::to_string(&WORLD).unwrap();
     return JsValue::from_str(&json_string);
 }
 
