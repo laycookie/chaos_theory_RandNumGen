@@ -64,7 +64,7 @@ pub unsafe fn del_circle(id: i64) {
 }
 
 #[wasm_bindgen]
-pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spacing: i32, radius: i32) {
+pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spacing: f64, radius: f64) {
     // clear circles previously generated (circles without id)
     WORLD.circles.retain(|circle| {
         if let Some(_) = circle.id {
@@ -78,8 +78,8 @@ pub unsafe fn manny_circle_set(circle_amount_x: i32, circle_amount_y: i32, spaci
     for x in 0..circle_amount_x {
         for y in 0..circle_amount_y{
             WORLD.circles.push(Circle {
-                x: (x*spacing - (circle_amount_x/2)) as f64,
-                y: (y*spacing - (circle_amount_y/2)) as f64,
+                x: ((x as f64) * spacing - ((circle_amount_x as f64) / 2f64)) as f64,
+                y: ((y as f64) * spacing - ((circle_amount_y as f64) / 2f64)) as f64,
                 radius: radius as f64,
                 id: None,});
         }
