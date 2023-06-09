@@ -1,6 +1,6 @@
 [package]
 name = "chaos_theory"
-version = "0.1.218"
+version = "0.1.255"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,4 +15,4 @@ serde_json = "1.0"
 
 [dependencies.web-sys]
 version = "0.3.62"
-features = ["Window"]
+features = ["Window", "console"]

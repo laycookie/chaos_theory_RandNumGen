@@ -98,58 +98,12 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
         let mut bounces: bool = false;
 
         let mut angle = in_angle;
-        // make sure the angle is always positive and within 360 degrees
-        fn filter_angle(angle:&mut f64) {
-            while *angle < 0f64 {
-                *angle += 360f64;
-            }
-            while *angle >= 360f64 {
-                *angle -= 360f64;
-            }
-        }
         filter_angle(&mut angle);
+
         for circle in &mut world_ref.circles {
             // centering the laser by changing circles location
             let cir_x = circle.x - laser_x_offset;
             let cir_y = circle.y - laser_y_offset;
-
-
-            // checking for angles at which quadrants intersect
-            if angle == 0f64 {
-                if !(cir_x > 0f64) {
-                    continue;
-                }
-            } else if angle == 90f64 {
-                if cir_y < 0f64 {
-                    continue;
-                }
-            } else if angle == 180f64 {
-                if cir_x > 0f64 {
-                    continue;
-                }
-            } else if angle == 270f64 {
-                if cir_y > 0f64 {
-                    continue;
-                }
-            }
-            // validate that the circle is in the correct quadrant based on the angle
-            else if angle > 0f64 && angle < 90f64 {
-                if cir_x <= 0f64 && cir_y <= 0f64 {
-                    continue;
-                }
-            } else if angle > 90f64 && angle < 180f64 {
-                if cir_x >= 0f64 && cir_y <= 0f64 {
-                    continue;
-                }
-            } else if angle > 180f64 && angle < 270f64 {
-                if cir_x >= 0f64 && cir_y >= 0f64 {
-                    continue;
-                }
-            } else if angle > 270f64 && angle < 360f64 {
-                if cir_x <= 0f64 && cir_y >= 0f64 {
-                    continue;
-                }
-            }
 
             // calculate the intersection of the laser and the circle
             let pi = std::f64::consts::PI;
@@ -157,7 +111,7 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
             let b;
             let c;
 
-            if !(angle == 90f64 || angle == 270f64) {
+            if angle != 90f64 || angle != 270f64 {
                 a = 1.0 + ((angle*pi)/180f64).tan().powi(2);
                 b = (-2f64 * cir_y * ((pi*angle)/180f64).tan()) - (2f64 * cir_x);
                 c = cir_y.powi(2) - circle.radius.powi(2) + cir_x.powi(2);
@@ -182,28 +136,51 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
                 intersection = raw_intersection.unwrap();
             }
 
-            // validate that the closest intersection is used
-            let mut temp_x: f64;
-            let mut temp_y: f64;
-            if intersection.1 < 0f64 {
+            // find set y and x function
+            fn set_cords(x: &mut f64, y: &mut f64, angle: f64, intersection: f64) {
                 if angle == 90f64 || angle == 270f64 {
-                    temp_y = intersection.0;
-                    temp_x = 0f64;
+                    *y = intersection;
+                    *x = 0f64;
                 } else {
-                    temp_x = intersection.0;
-                    temp_y = (angle * (pi/180f64)).tan() * temp_x;
+                    *x = intersection;
+                    *y = (angle * (std::f64::consts::PI/180f64)).tan() * *x;
+                }
+            }
+
+            // validate that the closest intersection is used
+            let mut temp_x: f64 = 0f64;
+            let mut temp_y: f64 = 0f64;
+            // just trust me this if statement makes perfect sense
+            if intersection.1 < 0f64 {
+                set_cords(&mut temp_x, &mut temp_y, angle, intersection.0);
+
+            } else {
+                set_cords(&mut temp_x, &mut temp_y, angle, intersection.1);
+            }
+
+            // checks that the intersection is in the right direction
+            if angle == 90f64 || angle == 270f64  {
+                if angle == 90f64 {
+                    if temp_y < 0f64 {
+                        continue;
+                    }
+                } else {
+                    if temp_y > 0f64 {
+                        continue;
+                    }
+                }
+            } else if angle > 90f64 && angle < 270f64 {
+                if temp_x > 0f64 {
+                    continue;
                 }
             } else {
-                if angle == 90f64 || angle == 270f64 {
-                    temp_y = intersection.1;
-                    temp_x = 0f64;
-                } else {
-                    temp_x = intersection.1;
-                    temp_y = (angle * (pi/180f64)).tan() * temp_x;
+                if temp_x < 0f64 {
+                    continue;
                 }
             }
             temp_y += laser_y_offset;
             temp_x += laser_x_offset;
+
 
             // checks if intersects with the circle at the same point as the laser
             if round_to_2_decimals(temp_x, 4) == round_to_2_decimals(laser_x_offset, 4) &&
@@ -212,7 +189,9 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
             }
 
             // check if the intersection is closer than the previous one
-            if distance(temp_x, temp_y) < distance(end_x, end_y) || reflecting_angle == -1f64 {
+            if distance(temp_x - laser_x_offset, temp_y - laser_y_offset)
+                < distance(end_x - laser_x_offset, end_y - laser_y_offset)
+                || reflecting_angle == -1f64 {
                 end_x = temp_x;
                 end_y = temp_y;
             } else { continue; }
@@ -257,6 +236,8 @@ pub unsafe fn simulate(ini_laser_offset_x: f64, ini_laser_offset_y: f64, ini_las
             filter_angle(&mut reflecting_angle);
 
             bounces = true;
+
+
         }
         
         // add the laser beam to the WORLD
@@ -302,6 +283,16 @@ fn quadratic(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
 /// please just don't pass 0 as rounding_to
 fn round_to_2_decimals(num: f64, rounding_to: u32) -> f64 {
     return (num * (10_i32.pow(rounding_to)/10_i32) as f64).round() / (10_i32.pow(rounding_to)/10_i32) as f64;
+}
+
+/// make sure the angle is always positive and within 360 degrees
+fn filter_angle(angle:&mut f64) {
+    while *angle < 0f64 {
+        *angle += 360f64;
+    }
+    while *angle >= 360f64 {
+        *angle -= 360f64;
+    }
 }
 
 fn distance(x: f64, y: f64) -> f64 {
